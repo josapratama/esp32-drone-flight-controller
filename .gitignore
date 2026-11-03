@@ -1,0 +1,21 @@
+# Compiled Object and Firmware Files
+*.o
+*.d
+*.elf
+*.bin
+*.hex
+*.map
+
+# Arduino & PlatformIO
+.pio/
+.vscode/
+.idea/
+build/
+*.sketch/
+
+# OS Specific
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
