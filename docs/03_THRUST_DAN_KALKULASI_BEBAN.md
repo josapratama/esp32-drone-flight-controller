@@ -142,3 +142,4 @@ Estimasi durasi melayang (*Hover Flight Time*) dihitung berdasarkan konsumsi day
 1. **Pilih Propeller Lebih Besar dengan KV Rendah:** Jika tujuan utama adalah terbang durasi panjang (*endurance*), gunakan motor 920KV–1000KV dengan propeller 1045.
 2. **Kerapian Kabel & Struktur Ringan:** Potong kabel yang terlalu panjang untuk memangkas bobot gram demi gram.
 3. **Hindari Manuver Throttle Liar:** Penerbangan dengan gerakan stick yang halus menghemat konsumsi energi hingga 25% dibanding akselerasi mendadak.
+

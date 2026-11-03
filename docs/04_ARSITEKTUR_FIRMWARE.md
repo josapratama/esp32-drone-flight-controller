@@ -181,3 +181,4 @@ Pada drone konvensional tanpa AirMode, ketika pilot menarik stick throttle ke po
 **Solusi AirMode pada Firmware Ini:**
 - Ketika throttle berada di bawah batas idle ($< 1050\mu\text{s}$), loop PID tetap dipertahankan aktif $100\%$.
 - Motor diizinkan berputar pada kecepatan idle dinamis untuk menghasilkan momen kendali penyeimbang meskipun drone sedang dalam kondisi deselerasi bebas.
+

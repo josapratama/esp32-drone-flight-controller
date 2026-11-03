@@ -125,3 +125,4 @@ Sebelum menghubungkan baterai di lapangan, lakukan pengecekan berikut:
   1. Pastikan saklar remote pada posisi **DISARM**.
   2. Jangan langsung menyentuh baling-baling; cabut kabel baterai LiPo terlebih dahulu.
   3. Raba suhu keempat motor. Jika ada salah satu motor yang sangat panas, periksa kemungkinan debu masuk atau kabel tertekan.
+

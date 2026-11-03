@@ -229,3 +229,4 @@ Sebelum mencolokkan baterai LiPo untuk pertama kali, lakukan pemeriksaan multi-t
 - [ ] **Koneksi Common Ground:** Pastikan pin GND ESP32, GND ESC, GND Receiver, dan GND Sensor tersambung nol Ohm ke kutub negatif baterai.
 - [ ] **Polaritas BEC:** Pastikan output BEC tepat mengalirkan tegangan $5.0\text{V} \pm 0.1\text{V}$ sebelum kabel daya dihubungkan ke ESP32.
 - [ ] **Pemberian Daya Awal Tanpa Propeller:** **LEPASKAN SEMUA PROPELLER** sebelum melakukan uji daya pertama kali!
+

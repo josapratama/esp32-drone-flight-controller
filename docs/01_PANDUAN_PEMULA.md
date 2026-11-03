@@ -201,3 +201,4 @@ Baterai Lithium Polymer (LiPo) memiliki densitas energi tinggi namun memerlukan 
 - **Failsafe:** Prosedur darurat otomatis saat sinyal remote hilang (misal mendarat perlahan atau mengaktifkan RTH).
 - **Drift:** Fenomena drone perlahan bergeser sendiri karena ketidaksempurnaan titik gravitasi atau sensor.
 - **Jitter:** Fluktuasi nilai sinyal secara acak yang disebabkan oleh derau listrik (*electrical noise*).
+

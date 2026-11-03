@@ -140,3 +140,4 @@ Firmware dilengkapi antarmuka web mandiri yang di-host langsung oleh chip ESP32 
 - Ketika Anda mengubah nilai slider PID pada Web Dashboard, nilai tersebut langsung diuji coba secara real-time ke memori RAM flight controller.
 - Setelah menemukan karakter terbang yang paling pas, klik tombol **"SAVE TO NVS"** pada halaman web.
 - Parameter akan ditulis secara permanen ke chip Flash internal ESP32 (Non-Volatile Storage) dan akan otomatis dimuat setiap kali drone dinyalakan kembali.
+

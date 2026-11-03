@@ -192,3 +192,4 @@ Untuk panduan mendalam, silakan baca dokumentasi di folder `docs/`:
 ## 📄 Lisensi
 
 Proyek ini dirilis di bawah lisensi terbuka [MIT License](LICENSE). Bebas digunakan, dimodifikasi, dan dikembangkan untuk keperluan edukasi, hobi, maupun komersial.
+

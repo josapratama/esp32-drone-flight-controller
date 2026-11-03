@@ -166,3 +166,4 @@ Lakukan checklist ini **HANYA JIKA TEST 1 SAMPAI TEST 7 SUDAH LULUS SEMUA**:
 - [ ] Mur pengunci baling-baling dikencangkan dengan kunci pas (tidak boleh longgar).
 - [ ] Baling-baling tidak menyentuh kabel, antena GPS, atau receiver saat berputar.
 - [ ] Siapkan lapangan terbuka yang aman, bebas dari kerumunan orang atau hewan peliharaan sebelum uji terbang pertama!
+
