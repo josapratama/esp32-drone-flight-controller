@@ -18,11 +18,10 @@ static uint32_t lastBeaconMs = 0;
 
 static float readBattVoltage() {
   long sum = 0;
-  for (int i = 0; i < BATT_SAMPLES; i++) {
+  for (int i = 0; i < 4; i++) {
     sum += analogRead(PIN_BATTERY_ADC);
-    delayMicroseconds(100);
   }
-  float adc     = sum / (float)BATT_SAMPLES;
+  float adc     = sum / 4.0f;
   float voltage = (adc / BATT_ADC_MAX) * BATT_ADC_REF * BATT_DIVIDER_RATIO;
   return voltage;
 }
@@ -198,28 +197,10 @@ void safetyInit() {
 }
 
 // ─────────────────────────────────────────────────
-void safetyUpdate(float roll, float pitch, bool armed, float accG) {
-  // ── Baca baterai ─────────────────────────────
-  float rawVolt  = readBattVoltage();
-  battFiltered   = BATT_LPF_ALPHA * battFiltered + (1.0f - BATT_LPF_ALPHA) * rawVolt;
-  data.battVoltage = battFiltered;
-  data.battPercent = battToPercent(battFiltered);
-
-  float warnV     = is4S ? BATT_4S_WARN     : BATT_3S_WARN;
-  float criticalV = is4S ? BATT_4S_CRITICAL : BATT_3S_CRITICAL;
-  float landV     = is4S ? BATT_4S_LAND     : BATT_3S_LAND;
-
-  bool prevWarn = data.battWarn;
-  data.battWarn     = (battFiltered < warnV);
-  data.battCritical = (battFiltered < criticalV);
-  data.battLand     = (battFiltered < landV);
-
-  if (data.battWarn && !prevWarn) {
-    Serial.printf("[SAFETY] Baterai LOW: %.2fV\n", battFiltered);
-    buzzerBeep(3, 200, 200);
-  }
-
-  // ── Cek angle & Crash Detection ──────────────
+// Fast Safety: Dipanggil di Fast Loop 500Hz (< 5 microsecond, non-blocking)
+// Hanya mengecek kemiringan kritis dan deteksi tabrakan/crash
+// ─────────────────────────────────────────────────
+void safetyUpdateFast(float roll, float pitch, bool armed, float accG) {
   bool prevAngle     = data.angleExceeded;
   data.angleExceeded = (fabsf(roll) > SAFETY_MAX_ANGLE ||
                         fabsf(pitch) > SAFETY_MAX_ANGLE);
@@ -243,6 +224,32 @@ void safetyUpdate(float roll, float pitch, bool armed, float accG) {
 
   data.armAllowed = (fabsf(roll)  < SAFETY_MAX_ANGLE_ARM &&
                      fabsf(pitch) < SAFETY_MAX_ANGLE_ARM);
+}
+
+// ─────────────────────────────────────────────────
+// Slow Safety: Dipanggil di Slow Loop 50Hz
+// Sampling ADC baterai, lost beacon, update buzzer dan LED
+// ─────────────────────────────────────────────────
+void safetyUpdateSlow(bool armed) {
+  // ── Baca baterai ─────────────────────────────
+  float rawVolt    = readBattVoltage();
+  battFiltered     = BATT_LPF_ALPHA * battFiltered + (1.0f - BATT_LPF_ALPHA) * rawVolt;
+  data.battVoltage = battFiltered;
+  data.battPercent = battToPercent(battFiltered);
+
+  float warnV     = is4S ? BATT_4S_WARN     : BATT_3S_WARN;
+  float criticalV = is4S ? BATT_4S_CRITICAL : BATT_3S_CRITICAL;
+  float landV     = is4S ? BATT_4S_LAND     : BATT_3S_LAND;
+
+  bool prevWarn = data.battWarn;
+  data.battWarn     = (battFiltered < warnV);
+  data.battCritical = (battFiltered < criticalV);
+  data.battLand     = (battFiltered < landV);
+
+  if (data.battWarn && !prevWarn) {
+    Serial.printf("[SAFETY] Baterai LOW: %.2fV\n", battFiltered);
+    buzzerBeep(3, 200, 200);
+  }
 
   // ── Lost Drone Beacon ────────────────────────
   #ifdef ENABLE_LOST_BEACON
@@ -281,6 +288,12 @@ void safetyUpdate(float roll, float pitch, bool armed, float accG) {
 
   buzzerUpdate();
   ledUpdate();
+}
+
+// Backward-compatible wrapper
+void safetyUpdate(float roll, float pitch, bool armed, float accG) {
+  safetyUpdateFast(roll, pitch, armed, accG);
+  safetyUpdateSlow(armed);
 }
 
 SafetyData safetyGet() {

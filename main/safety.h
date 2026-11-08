@@ -62,6 +62,8 @@ struct SafetyData {
 
 void         safetyInit();
 void         safetyUpdate(float roll, float pitch, bool armed, float accG = 1.0f);
+void         safetyUpdateFast(float roll, float pitch, bool armed, float accG = 1.0f);
+void         safetyUpdateSlow(bool armed = false);
 SafetyData   safetyGet();
 SafetyStatus safetyGetStatus();
 float        safetyGetThrustMultiplier();

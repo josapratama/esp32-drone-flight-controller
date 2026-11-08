@@ -12,8 +12,8 @@
 #define NAV_MAX_LEAN_ANGLE    20.0f   // derajat, max kemiringan saat navigasi
 #define NAV_SPEED_MAX         3.0f    // m/s, kecepatan max GPS hold
 #define NAV_ACCEPT_RADIUS     1.5f    // meter, radius dianggap sudah di titik
-#define RTH_SAFE_ALTITUDE     5.0f    // meter, ketinggian aman sebelum RTH
-#define RTH_LAND_RADIUS       1.0f    // meter, mulai landing jika dalam radius ini
+#define RTH_SAFE_ALTITUDE     15.0f   // meter, ketinggian aman sebelum RTH (di atas pepohonan/atap)
+#define RTH_LAND_RADIUS       1.5f    // meter, mulai landing jika dalam radius ini
 #define LAND_DESCENT_RATE     0.3f    // m/s, kecepatan turun saat landing
 #define LAND_DETECT_ALT       0.15f   // meter, dianggap sudah landed
 
@@ -190,9 +190,10 @@ static void updateGPSHold(float dt) {
   float leanNorth = pidVelNorth.compute(targetVelNorth, velNorth, dt);
   float leanEast  = pidVelEast.compute(targetVelEast,  velEast,  dt);
 
-  // Rotasi ke frame drone (kompensasi heading)
+  // Rotasi ke frame drone (kompensasi heading menggunakan sensor IMU yaw sejati)
   float rollCorr, pitchCorr;
-  rotateToBody(leanNorth, leanEast, gps.heading, rollCorr, pitchCorr);
+  IMUData imu = imuGet();
+  rotateToBody(leanNorth, leanEast, imu.yaw, rollCorr, pitchCorr);
 
   // Normalisasi ke -1 ~ 1
   navOut.rollCorrection  = constrain(rollCorr  / NAV_MAX_LEAN_ANGLE, -1.0f, 1.0f);

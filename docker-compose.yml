@@ -17,3 +17,4 @@ services:
       - SITL_ENABLED=true
     volumes:
       - ./gcs/missions:/app/missions
+

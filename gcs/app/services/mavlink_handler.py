@@ -22,6 +22,7 @@ class TelemetryBridge:
         self._reader_task: Optional[asyncio.Task] = None
         self._serial_conn = None
         self._udp_sock = None
+        self._udp_last_addr = None
         self._tcp_reader = None
         self._tcp_writer = None
 
@@ -107,7 +108,20 @@ class TelemetryBridge:
                 if line.startswith("{") and line.endswith("}"):
                     j = json.loads(line)
                     # Expected keys from ESP32 quadcopter:
-                    # {"roll": 1.2, "pitch": -0.5, "yaw": 90.0, "alt": 12.3, "bat": 11.8, "armed": 1, ...}
+                    # {"roll": 1.2, "pitch": -0.5, "yaw": 90.0, "alt": 12.3, "batt": 11.8, "armed": true, ...}
+                    m1_raw = float(j.get("m1", 0.0))
+                    m2_raw = float(j.get("m2", 0.0))
+                    m3_raw = float(j.get("m3", 0.0))
+                    m4_raw = float(j.get("m4", 0.0))
+                    m1_pct = max(0.0, min(100.0, (m1_raw - 1000.0) / 10.0 if m1_raw > 500 else m1_raw))
+                    m2_pct = max(0.0, min(100.0, (m2_raw - 1000.0) / 10.0 if m2_raw > 500 else m2_raw))
+                    m3_pct = max(0.0, min(100.0, (m3_raw - 1000.0) / 10.0 if m3_raw > 500 else m3_raw))
+                    m4_pct = max(0.0, min(100.0, (m4_raw - 1000.0) / 10.0 if m4_raw > 500 else m4_raw))
+
+                    raw_mode = j.get("mode", "STABILIZE")
+                    mode_map = {0: "STABILIZE", 1: "ACRO", 2: "ALT_HOLD", 3: "GPS_HOLD"}
+                    flight_mode_str = mode_map.get(raw_mode, str(raw_mode)).upper()
+
                     asyncio.create_task(telemetry_manager.update_state(
                         connected=True,
                         connection_type=self.connection_type,
@@ -117,14 +131,14 @@ class TelemetryBridge:
                         yaw=float(j.get("yaw", 0.0)),
                         altitude_agl=float(j.get("alt", j.get("altitude", 0.0))),
                         groundspeed=float(j.get("speed", 0.0)),
-                        battery_voltage=float(j.get("bat", j.get("vbat", 12.0))),
+                        battery_voltage=float(j.get("batt", j.get("bat", j.get("vbat", 12.0)))),
                         battery_percent=int(j.get("bat_pct", 85)),
                         armed=bool(j.get("armed", False)),
-                        flight_mode=str(j.get("mode", "STABILIZE")).upper(),
-                        motor_m1=float(j.get("m1", 0.0)),
-                        motor_m2=float(j.get("m2", 0.0)),
-                        motor_m3=float(j.get("m3", 0.0)),
-                        motor_m4=float(j.get("m4", 0.0)),
+                        flight_mode=flight_mode_str,
+                        motor_m1=m1_pct,
+                        motor_m2=m2_pct,
+                        motor_m3=m3_pct,
+                        motor_m4=m4_pct,
                         latitude=float(j.get("lat", -6.175392)),
                         longitude=float(j.get("lon", 106.827153)),
                         satellites=int(j.get("sats", 12)),
@@ -157,6 +171,7 @@ class TelemetryBridge:
         while self.connected and self._udp_sock:
             try:
                 data, addr = await loop.sock_recvfrom(self._udp_sock, 2048)
+                self._udp_last_addr = addr
                 self._parse_packet(data)
             except Exception:
                 await asyncio.sleep(0.02)
@@ -184,6 +199,8 @@ class TelemetryBridge:
             elif self._tcp_writer:
                 self._tcp_writer.write(payload)
                 await self._tcp_writer.drain()
+            elif self._udp_sock and self._udp_last_addr:
+                self._udp_sock.sendto(payload, self._udp_last_addr)
             return True, f"Sent {cmd}"
         except Exception as e:
             return False, str(e)

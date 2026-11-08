@@ -13,10 +13,16 @@
   #include "safety.h"
 #endif
 
+#ifdef ENABLE_BARO
+  #include "baro.h"
+#endif
+
 #ifdef ENABLE_BLACKBOX
   #include <LittleFS.h>
   #include "blackbox.h"
 #endif
+
+extern int flightMode;
 
 static WebServer server(80);
 static PID* pRoll = nullptr;
@@ -267,13 +273,23 @@ void wifiTuningInit(PID &roll, PID &pitch, PID &yaw) {
     float thr = (float)(rcGetRaw(CH_THROTTLE) - RC_MIN) / (RC_MAX - RC_MIN);
     thr = constrain(thr, 0.0f, 1.0f);
 
+    float curAlt = 0.0f;
+    #ifdef ENABLE_BARO
+      curAlt = baroGet().altitude;
+    #endif
+
     String json = "{";
     json += "\"roll\":" + String(imu.roll, 2) + ",";
     json += "\"pitch\":" + String(imu.pitch, 2) + ",";
     json += "\"yaw\":" + String(imu.yaw, 2) + ",";
     json += "\"batt\":" + String(battV, 2) + ",";
     json += "\"throttle\":" + String(thr, 2) + ",";
+    json += "\"alt\":" + String(curAlt, 2) + ",";
+    json += "\"mode\":" + String(flightMode) + ",";
     json += "\"m1\":" + String(motorGetPWM(0)) + ",";
+    json += "\"m2\":" + String(motorGetPWM(1)) + ",";
+    json += "\"m3\":" + String(motorGetPWM(2)) + ",";
+    json += "\"m4\":" + String(motorGetPWM(3)) + ",";
     json += "\"armed\":" + String(motorIsArmed() ? "true" : "false") + ",";
     json += "\"rkp\":" + String(pRoll->getKp(), 3) + ",";
     json += "\"rki\":" + String(pRoll->getKi(), 4) + ",";

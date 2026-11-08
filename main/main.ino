@@ -283,10 +283,10 @@ void loop() {
     receiverUpdate();
     IMUData imu = imuGet();
 
-    // 2. Safety & Crash Detection
+    // 2. Safety & Crash Detection (Non-blocking Fast Check <5µs)
     #ifdef ENABLE_SAFETY
       float accMag = sqrtf(imu.accX * imu.accX + imu.accY * imu.accY + imu.accZ * imu.accZ);
-      safetyUpdate(imu.roll, imu.pitch, isArmed, accMag);
+      safetyUpdateFast(imu.roll, imu.pitch, isArmed, accMag);
       SafetyData safety = safetyGet();
 
       if (isArmed && (safety.angleExceeded || safety.crashDetected)) {
@@ -512,6 +512,7 @@ void loop() {
       if (isArmed) navUpdate(dtSlow);
     #endif
     #ifdef ENABLE_SAFETY
+      safetyUpdateSlow(isArmed);
       buzzerUpdate();
       ledUpdate();
     #endif
@@ -526,7 +527,8 @@ void loop() {
         #ifdef ENABLE_SAFETY
           battV = safetyGet().battVoltage;
         #endif
-        blackboxLog(millis(), imu.roll, imu.pitch, imu.yaw,
+        IMUData imuSlow = imuGet();
+        blackboxLog(millis(), imuSlow.roll, imuSlow.pitch, imuSlow.yaw,
                     (float)(rcGetRaw(CH_THROTTLE) - RC_MIN) / (RC_MAX - RC_MIN),
                     motorGetPWM(0), motorGetPWM(1), motorGetPWM(2), motorGetPWM(3),
                     battV, flightMode);

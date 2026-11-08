@@ -267,7 +267,14 @@ window.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowDown") { stickState.throttle = Math.max(0.0, stickState.throttle - 0.05); changed = true; }
   else if (e.key === "ArrowLeft") { stickState.yaw = -0.6; changed = true; }
   else if (e.key === "ArrowRight") { stickState.yaw = 0.6; changed = true; }
-  else if (e.key === " ") { triggerEmergencyCut(); }
+  else if (e.key === " ") {
+    if (e.shiftKey) {
+      triggerEmergencyCut();
+    } else {
+      playBeep(400, 0.1);
+      console.warn("Press Shift + Space to trigger Emergency Motor Cut");
+    }
+  }
   else if (e.key === "t" || e.key === "T") { triggerTakeoff(); }
   else if (e.key === "r" || e.key === "R") { triggerRTL(); }
 
