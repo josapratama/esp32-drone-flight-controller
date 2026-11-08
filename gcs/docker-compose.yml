@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  drone-webgcs:
+    build: .
+    container_name: drone-webgcs
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+      - "14550:14550/udp"
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    environment:
+      - GCS_HOST=0.0.0.0
+      - GCS_PORT=8090
+      - DEFAULT_CONN_TYPE=sitl
+      - HOME_LAT=-6.175392
+      - HOME_LON=106.827153
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "1.0"
+

@@ -24,7 +24,30 @@ Sistem pengendali terbang (*Flight Controller*) quadcopter otonom berkinerja tin
   - **Emergency Crash Detection ($<40\text{ ms}$):** Memutus putaran motor secara instan saat drone mengalami kemiringan ekstrem ($> 65^\circ$).
   - **Radio Signal Loss Failsafe:** Deteksi timeout iBUS digital ($> 500\text{ ms}$) dengan opsi penurunan bertahap (*controlled descent*) atau Return-To-Home.
 - **Telemetri WiFi & Tuning PID Tanpa Kabel:** Web dashboard interaktif langsung dari smartphone (`http://192.168.4.1`) untuk melihat orientasi real-time dan menyimpan konstanta Kp, Ki, Kd langsung ke memori Flash NVS.
+- **Web 3D Ground Control Station (GCS) Terintegrasi (`/gcs`):**
+  - **Visualisasi 3D Orientasi Real-Time**: Quadcopter 3D canvas interaktif (Three.js) dengan rotasi pitch/roll/yaw tersinkronisasi.
+  - **Primary Flight Display (PFD / HUD Canvas)**: Artificial horizon, altitude tape, airspeed, compass ribbon, dan flight mode annunciator bergaya kokpit militer.
+  - **Tactical Mission Planner**: Peta taktis interaktif (Leaflet) untuk plotting waypoint, radius geofence, rute patroli, dan Return-To-Launch (RTL).
+  - **SITL 6-DOF Physics Engine Simulator**: Built-in simulator aerodinamika drone 6-axis dengan hembusan angin dinamis dan degradasi baterai LiPo.
 - **Sensor Lengkap Siap Navigasi Otonom:** Mendukung Barometer BMP280 (Altitude Hold), Laser ToF VL53L1X (Precision Landing), dan GPS U-Blox Neo-M8N (Waypoint/RTH).
+
+---
+
+## 🖥️ Menjalankan Ground Control Station (GCS)
+
+Stasiun darat dapat dijalankan langsung menggunakan Docker Compose atau Python:
+
+```bash
+# Opsi 1: Docker Compose (Direkomendasikan)
+docker compose up -d
+
+# Opsi 2: Python Langsung
+cd gcs
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8083
+```
+Buka dashboard di browser: **`http://localhost:8083`** (atau via IP Raspberry Pi Anda).
+MAVLink UDP Telemetry Bridge menerima data pada port **`14550/udp`**.
 
 ---
 

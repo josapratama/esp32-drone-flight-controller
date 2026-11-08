@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web 3D Drone Ground Control Station (GCS)</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Custom GCS Theme -->
+  <link rel="stylesheet" href="/static/css/gcs.css" />
+</head>
+<body>
+
+  <!-- ─── Top Telemetry Navbar ─── -->
+  <header class="gcs-topbar">
+    <div class="brand-section">
+      <div class="brand-logo">🛸</div>
+      <div class="brand-title">
+        DRONE GCS 3D
+        <span>v1.0 SITL</span>
+      </div>
+    </div>
+
+    <!-- Live Flight Status & Badges -->
+    <div class="nav-telemetry-group">
+      <!-- Arm Status Button -->
+      <button id="arm-status-badge" class="telemetry-badge badge-arm-status disarmed" onclick="toggleArm()">
+        <span class="pulse-dot"></span> DISARMED
+      </button>
+
+      <!-- Flight Mode Selector -->
+      <select id="mode-selector" class="mode-select" onchange="setFlightMode(this.value)">
+        <option value="STABILIZE">STABILIZE</option>
+        <option value="ALT_HOLD">ALT_HOLD</option>
+        <option value="LOITER">LOITER</option>
+        <option value="AUTO">AUTO (WAYPOINT)</option>
+        <option value="RTL">RTL (RETURN HOME)</option>
+        <option value="LAND">LAND</option>
+        <option value="MANUAL">MANUAL (ACRO)</option>
+      </select>
+
+      <!-- Battery Indicator -->
+      <div class="telemetry-badge">
+        <span>🔋</span>
+        <span id="bat-val">12.4V (95%)</span>
+        <div style="width: 40px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-left: 4px;">
+          <div id="bat-bar" style="width: 95%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
+        </div>
+      </div>
+
+      <!-- Connection Status -->
+      <div id="conn-status-badge" class="telemetry-badge">
+        <span class="pulse-dot" style="background:#10b981;"></span> ONLINE
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="nav-actions">
+      <button class="btn-gcs btn-gcs-primary" onclick="triggerTakeoff()">
+        <span>🛫</span> Takeoff (10m)
+      </button>
+      <button class="btn-gcs btn-gcs-primary" onclick="triggerRTL()">
+        <span>🏠</span> RTL
+      </button>
+      <button class="btn-gcs btn-gcs-primary" onclick="triggerLand()">
+        <span>🛬</span> Land
+      </button>
+      <button class="btn-gcs btn-gcs-danger btn-emergency" onclick="triggerEmergencyCut()">
+        <span>⚠️</span> MOTOR CUT
+      </button>
+      <button class="btn-gcs" style="background: rgba(30, 41, 59, 0.8); color: #fff;" onclick="openConnectionModal()">
+        <span>⚙️</span> Link
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Main Workspace Grid ─── -->
+  <main class="gcs-main">
+    
+    <!-- Column 1: 3D Attitude Indicator & HUD -->
+    <section class="gcs-card">
+      <div class="gcs-card-header">
+        <span>Attitude & Horizon 3D</span>
+        <span style="font-size: 10px; color: var(--text-muted);">60 FPS WEBGL</span>
+      </div>
+      <div class="gcs-card-body">
+        <!-- Three.js 3D Viewport -->
+        <div id="three-canvas-container"></div>
+        
+        <!-- PFD Canvas Overlay (Pitch ladder, Altimeter/Speedometer tapes) -->
+        <canvas id="pfd-canvas"></canvas>
+
+        <!-- Attitude Metrics -->
+        <div class="attitude-overlay">
+          <div class="att-metric">ROLL: <span id="att-roll">0.0°</span></div>
+          <div class="att-metric">PITCH: <span id="att-pitch">0.0°</span></div>
+          <div class="att-metric">YAW: <span id="att-yaw">0.0°</span></div>
+        </div>
+
+        <!-- Motors Dock (M1 to M4) -->
+        <div class="motors-dock">
+          <div class="motor-item">
+            <span id="m1-text">0%</span>
+            <div class="motor-bar-track"><div id="m1-fill" class="motor-bar-fill" style="height:0%;"></div></div>
+            <span>M1</span>
+          </div>
+          <div class="motor-item">
+            <span id="m2-text">0%</span>
+            <div class="motor-bar-track"><div id="m2-fill" class="motor-bar-fill" style="height:0%;"></div></div>
+            <span>M2</span>
+          </div>
+          <div class="motor-item">
+            <span id="m3-text">0%</span>
+            <div class="motor-bar-track"><div id="m3-fill" class="motor-bar-fill" style="height:0%;"></div></div>
+            <span>M3</span>
+          </div>
+          <div class="motor-item">
+            <span id="m4-text">0%</span>
+            <div class="motor-bar-track"><div id="m4-fill" class="motor-bar-fill" style="height:0%;"></div></div>
+            <span>M4</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Column 2: Tactical GPS Map & Mission Planner -->
+    <section class="gcs-card">
+      <div class="gcs-card-header">
+        <span>Tactical Navigation & Waypoints</span>
+        <div class="mission-summary-pill" id="wp-count-badge">0 WP</div>
+      </div>
+      <div class="gcs-card-body">
+        <div id="leaflet-map"></div>
+
+        <!-- Floating Map Dock -->
+        <div class="map-control-dock">
+          <button class="btn-gcs btn-gcs-primary" onclick="mapPlanner.centerOnDrone()">
+            🎯 Center Drone
+          </button>
+          <button id="btn-wp-mode" class="btn-gcs" style="background: rgba(30,41,59,0.9); color:#fff;" onclick="
+            const active = mapPlanner.togglePlanningMode();
+            this.style.background = active ? '#f59e0b' : 'rgba(30,41,59,0.9)';
+            this.style.color = active ? '#000' : '#fff';
+          ">
+            📍 Tambah Waypoint
+          </button>
+          <button class="btn-gcs btn-gcs-primary" onclick="uploadMission()">
+            🚀 Upload Misi
+          </button>
+          <button class="btn-gcs btn-gcs-danger" onclick="mapPlanner.clearWaypoints()">
+            🗑️ Clear
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Column 3: Cockpit Telemetry & Real-Time Blackbox Charts -->
+    <aside class="telemetry-sidebar">
+      
+      <!-- Primary Telemetry Numbers -->
+      <div class="gcs-card" style="flex: 0 0 auto;">
+        <div class="gcs-card-header">
+          <span>Flight Telemetry</span>
+          <span style="font-size: 10px; color: var(--emerald-neon);">SENSORS OK</span>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Altitude (AGL)</span>
+            <span class="metric-val" id="metric-alt">0.0<span class="metric-unit">m</span></span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Groundspeed</span>
+            <span class="metric-val" id="metric-spd">0.0<span class="metric-unit">m/s</span></span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Climb Rate</span>
+            <span class="metric-val" id="metric-climb">0.0<span class="metric-unit">m/s</span></span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Distance to Home</span>
+            <span class="metric-val" id="metric-dist-home">0.0<span class="metric-unit">m</span></span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Draw Current</span>
+            <span class="metric-val" id="metric-current">0.0<span class="metric-unit">A</span></span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Energy Consumed</span>
+            <span class="metric-val" id="metric-mah">0<span class="metric-unit">mAh</span></span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">GPS Satellites</span>
+            <span class="metric-val" id="metric-sats">14<span class="metric-unit">DGPS</span></span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Baro Temp</span>
+            <span class="metric-val" id="metric-temp">29.5<span class="metric-unit">°C</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Oscilloscope (Roll/Pitch & Vibration) -->
+      <div class="gcs-card" style="flex: 1;">
+        <div class="gcs-card-header">
+          <span>Real-time Blackbox Scope</span>
+          <span style="font-size: 10px; color: var(--cyan-neon);">ROLL (CYAN) / PITCH (AMBER)</span>
+        </div>
+        <div class="chart-box">
+          <canvas id="telemetry-chart-canvas" class="chart-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Waypoint List -->
+      <div class="gcs-card" style="flex: 0 0 160px;">
+        <div class="gcs-card-header">
+          <span>Waypoint Flight Plan</span>
+        </div>
+        <div id="wp-table-body" class="wp-list-scroll">
+          <div style="padding: 12px; text-align: center; color: var(--text-muted);">
+            Klik peta untuk menambah Waypoint baru
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- ─── Bottom Status Bar ─── -->
+  <footer class="gcs-bottombar">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span id="conn-type-text">SITL: Internal 6-DOF Physics</span>
+      <span style="color: rgba(255,255,255,0.2);">|</span>
+      <span id="status-text-bottom">STANDBY</span>
+    </div>
+
+    <!-- Keyboard Cheatsheet -->
+    <div class="keyboard-hint">
+      <span>Kontrol:</span>
+      <span class="kbd-badge">W/S</span> Pitch
+      <span class="kbd-badge">A/D</span> Roll
+      <span class="kbd-badge">↑/↓</span> Throttle
+      <span class="kbd-badge">←/→</span> Yaw
+      <span class="kbd-badge">T</span> Takeoff
+      <span class="kbd-badge">R</span> RTL
+      <span class="kbd-badge">Spasi</span> Emergency Stop
+    </div>
+  </footer>
+
+  <!-- ─── Connection Configuration Modal ─── -->
+  <div id="conn-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Pengaturan Telemetri & Koneksi Drone</span>
+        <button onclick="closeConnectionModal()" style="background:none; border:none; color:#fff; cursor:pointer; font-size:16px;">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Tipe Koneksi</label>
+          <select id="conn-type-select" class="form-control" onchange="
+            const t = this.value;
+            document.getElementById('opt-serial').style.display = t === 'serial' ? 'block' : 'none';
+            document.getElementById('opt-udp').style.display = t === 'udp' ? 'block' : 'none';
+            document.getElementById('opt-tcp').style.display = t === 'tcp' ? 'block' : 'none';
+          ">
+            <option value="sitl">SITL 6-DOF Simulator (Tanpa Hardware)</option>
+            <option value="serial">Serial Port (USB / UART Raspberry Pi)</option>
+            <option value="udp">UDP Telemetry (Port 14550 MAVLink)</option>
+            <option value="tcp">TCP Direct WiFi (ESP32 SoftAP 192.168.4.1)</option>
+          </select>
+        </div>
+
+        <!-- Serial Options -->
+        <div id="opt-serial" style="display: none;" class="form-group">
+          <label class="form-label">Serial Port</label>
+          <select id="serial-port-select" class="form-control">
+            <option value="/dev/ttyUSB0">/dev/ttyUSB0</option>
+            <option value="COM3">COM3</option>
+          </select>
+          <label class="form-label" style="margin-top:6px;">Baudrate</label>
+          <select id="serial-baud-select" class="form-control">
+            <option value="115200">115200</option>
+            <option value="57600">57600</option>
+            <option value="921600">921600</option>
+          </select>
+        </div>
+
+        <!-- UDP Options -->
+        <div id="opt-udp" style="display: none;" class="form-group">
+          <label class="form-label">Port Listener UDP</label>
+          <input type="number" id="udp-port-input" class="form-control" value="14550" />
+        </div>
+
+        <!-- TCP Options -->
+        <div id="opt-tcp" style="display: none;" class="form-group">
+          <label class="form-label">IP Address ESP32 / Drone</label>
+          <input type="text" id="tcp-host-input" class="form-control" value="192.168.4.1" />
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn-gcs btn-gcs-primary" style="flex: 1;" onclick="applyConnection()">
+            Hubungkan Telemetri
+          </button>
+          <button class="btn-gcs" style="background: rgba(255,255,255,0.1); color:#fff;" onclick="closeConnectionModal()">
+            Batal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CDN Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- GCS App Scripts -->
+  <script src="/static/js/three_drone.js"></script>
+  <script src="/static/js/hud.js"></script>
+  <script src="/static/js/map_planner.js"></script>
+  <script src="/static/js/telemetry_charts.js"></script>
+  <script src="/static/js/gcs_app.js"></script>
+</body>
+</html>
+
